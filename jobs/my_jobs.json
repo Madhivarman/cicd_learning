@@ -1,0 +1,27 @@
+{
+  "name": "single-tasks",
+  "new_cluster": {
+    "spark_version": "13.3.x-scala2.12",
+    "node_type_id": "Standard_DS3_v2",
+    "num_workers": 2,
+    "custom_tags": {
+      "Project": "ci-cd-demo"
+    }
+  },
+  "notebook_task": {
+    "notebook_path": "/Repos/your.name@yourdomain.com/my-project/src/my_module/example",
+    "base_parameters": {
+      "env": "prod"
+    }
+  },
+  "email_notifications": {
+    "on_failure": ["your.email@company.com"]
+  },
+  "timeout_seconds": 3600,
+  "max_retries": 1,
+  "schedule": {
+    "quartz_cron_expression": "0 0 12 * * ?",
+    "timezone_id": "UTC",
+    "pause_status": "UNPAUSED"
+  }
+}

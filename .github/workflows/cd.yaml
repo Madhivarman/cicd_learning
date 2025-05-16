@@ -1,0 +1,56 @@
+name: CD-Deployment
+
+on:
+  push:
+    branches: [release]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      DATABRICKS_HOST: https://<your_workspace>.azuredatabricks.net
+    
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v3
+      
+      - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: install databricks cli
+        run: pip install databricks-cli
+      
+      - name: configure databricks cli
+        run: |
+          mkdir -p ~/.databricks
+          echo "[DEFAULT]" > ~/.databricks/config
+          echo "host = $DATABRICKS_HOST" >> ~/.databricks/config
+          echo "token =${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databricks/config
+      
+      - name: Sync Databricks Repo (Git Pull)
+        run: |
+          REPO_ID=$(databricks repos list --output JSON | jq -r ".repos[] | select(.path=="/Repos/your.name@yourdomain.com/my-project") | .id")
+          if [-n "$REPO_ID" ]; then
+            databricks repos update --repo-id "$REPO_ID" --branch main
+            echo "Repo Synced to the latest main branch"
+          else
+            echo "Repo not found at expected path"
+            exit 1
+          fi
+
+      - name: Deploy databricks jobs
+        run: |
+            JOB_NAME="databricks-job-deployment"
+            JOB_JSON="jobs/my_job.json"
+            JOB_ID=$(databricks jobs list --output JSON | jq -r ".jobs[] | select(.settings.name==\"$JOB_NAME\") | .job_id")
+            
+            if [ -z "$JOB_ID" ]; then
+              echo "Creating job: $JOB_NAME"
+              databricks jobs create --json-file "$JOB_JSON"
+            else
+              echo "Updating job: $JOB_NAME (ID: $JOB_ID)"
+              databricks jobs reset --job-id "$JOB_ID" --json-file "$JOB_JSON"
+            fi
